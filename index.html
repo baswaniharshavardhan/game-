@@ -1,215 +1,414 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Level Devil Style Platformer</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: sans-serif;
-            flex-direction: column;
-        }
-        canvas {
-            background-color: #e0e0e0; /* Light gray background like standard levels */
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            border: 4px solid #333;
-        }
-        p { margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<title>Level Devil Style Game V2</title>
+
+<style>
+
+body {
+    margin: 0;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: Arial;
+}
+
+/* GAME WINDOW */
+
+#game {
+    width: 960px;
+    height: 540px;
+    background: #111;
+    border: 3px solid white;
+    position: relative;
+    overflow: hidden;
+}
+
+/* PLAYER */
+
+.player {
+    width: 32px;
+    height: 32px;
+    background: #00ff00;
+    position: absolute;
+}
+
+/* GROUND */
+
+.ground {
+    width: 100%;
+    height: 40px;
+    background: #333;
+    position: absolute;
+    bottom: 0;
+}
+
+/* PLATFORM */
+
+.platform {
+    width: 120px;
+    height: 20px;
+    background: #555;
+    position: absolute;
+}
+
+/* DISAPPEARING PLATFORM */
+
+.fakePlatform {
+    width: 120px;
+    height: 20px;
+    background: #777;
+    position: absolute;
+}
+
+/* SPIKES */
+
+.spike {
+    width: 32px;
+    height: 32px;
+    background: red;
+    position: absolute;
+}
+
+/* DOOR */
+
+.door {
+    width: 40px;
+    height: 60px;
+    background: lime;
+    position: absolute;
+}
+
+/* TEXT */
+
+#levelText {
+    color: white;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+</style>
 </head>
+
 <body>
 
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <p>Use <b>Arrow Keys</b> or <b>WASD</b> to move and jump.</p>
+<div id="game">
+
+<div id="levelText">
+Level 1
+</div>
+
+<div class="player" id="player"></div>
+
+<div class="ground"></div>
+
+</div>
 
 <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
 
-    // --- GAME PHYSICS & PARAMETERS ---
-    const gravity = 0.6;
-    const friction = 0.8;
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const levelText = document.getElementById("levelText");
 
-    // --- PLAYER OBJECT ---
-    const player = {
-        x: 50,
-        y: 400,
-        width: 30,
-        height: 30,
-        color: "#ff3333", // Red player block
-        vx: 0,
-        vy: 0,
-        speed: 5,
-        jumpPower: -12,
-        grounded: false
-    };
+/* PLAYER VARIABLES */
 
-    // --- INPUT HANDLING ---
-    const keys = {
-        right: false,
-        left: false,
-        up: false
-    };
+let x = 50;
+let y = 40;
 
-    window.addEventListener("keydown", (e) => {
-        if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
-        if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
-        if ((e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Space") && player.grounded) {
-            player.vy = player.jumpPower;
-            player.grounded = false;
-        }
-    });
+let velocityY = 0;
+let gravity = 0.6;
 
-    window.addEventListener("keyup", (e) => {
-        if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
-        if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
-    });
+let keys = {};
 
-    // --- LEVEL DESIGN & "TROLL" MECHANICS ---
-    // This is where you create the "Devil" difficulty. 
-    // You can add 'trigger' functions that execute when the player gets near.
-    const platforms = [
-        // Standard floor
-        { x: 0, y: 550, width: 800, height: 50, color: "#333333", isSolid: true },
-        // Standard platforms
-        { x: 150, y: 450, width: 100, height: 20, color: "#333333", isSolid: true },
-        { x: 350, y: 350, width: 100, height: 20, color: "#333333", isSolid: true },
-        
-        // TROLL PLATFORM (The "Level Devil" Mechanic)
-        // This platform disappears when the player jumps above it
-        { 
-            x: 550, y: 250, width: 100, height: 20, color: "#333333", isSolid: true,
-            trigger: function(player) {
-                // If player gets close to this platform, it turns invisible and non-solid
-                if (player.x > 450 && player.y < 300) {
-                    this.isSolid = false;
-                    this.color = "transparent"; // It vanishes!
-                }
-            }
-        },
+let level = 0;
 
-        // Goal Door/Area
-        { x: 700, y: 500, width: 50, height: 50, color: "#ffcc00", isSolid: false, isGoal: true }
-    ];
+/* LEVEL DATA */
 
-    // --- GAME LOOP ---
-    function update() {
-        // 1. Apply Movement Inputs
-        if (keys.right) player.vx = player.speed;
-        else if (keys.left) player.vx = -player.speed;
-        else player.vx *= friction; // Slide to a stop
+let levels = [
 
-        // 2. Apply Gravity
-        player.vy += gravity;
+/* LEVEL 1 */
 
-        // 3. Update Position
-        player.x += player.vx;
-        player.y += player.vy;
+{
+platforms:[
+{x:250,y:120}
+],
 
-        // 4. Collision Detection
-        player.grounded = false;
+fake:[
+{x:450,y:160}
+],
 
-        for (let i = 0; i < platforms.length; i++) {
-            let p = platforms[i];
+spikes:[
+{x:600,y:40}
+],
 
-            // Run platform triggers for "devil" mechanics
-            if (p.trigger) p.trigger(player);
+door:{x:900,y:40}
+},
 
-            if (!p.isSolid) continue;
+/* LEVEL 2 */
 
-            // Simple AABB Collision Detection
-            if (player.x < p.x + p.width &&
-                player.x + player.width > p.x &&
-                player.y < p.y + p.height &&
-                player.y + player.height > p.y) {
+{
+platforms:[
+{x:200,y:120},
+{x:400,y:180}
+],
 
-                // Calculate overlap from all sides
-                let dx = (player.x + player.width / 2) - (p.x + p.width / 2);
-                let dy = (player.y + player.height / 2) - (p.y + p.height / 2);
-                let width = (player.width + p.width) / 2;
-                let height = (player.height + p.height) / 2;
-                let crossWidth = width * dy;
-                let crossHeight = height * dx;
+fake:[
+{x:600,y:200}
+],
 
-                // Determine which side we collided on
-                if (Math.abs(dx) <= width && Math.abs(dy) <= height) {
-                    if (crossWidth > crossHeight) {
-                        if (crossWidth > (-crossHeight)) {
-                            // Top collision (landing on platform)
-                            player.y = p.y - player.height;
-                            player.vy = 0;
-                            player.grounded = true;
-                        } else {
-                            // Right collision (hitting wall from left)
-                            player.x = p.x + p.width;
-                            player.vx = 0;
-                        }
-                    } else {
-                        if (crossWidth > -(crossHeight)) {
-                            // Left collision (hitting wall from right)
-                            player.x = p.x - player.width;
-                            player.vx = 0;
-                        } else {
-                            // Bottom collision (hitting head on ceiling)
-                            player.y = p.y + p.height;
-                            player.vy = 0;
-                        }
-                    }
-                }
-            }
-        }
+spikes:[
+{x:350,y:40},
+{x:380,y:40}
+],
 
-        // Keep player in bounds
-        if (player.x < 0) player.x = 0;
-        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-        if (player.y > canvas.height) {
-            // Death condition: Reset player
-            player.x = 50;
-            player.y = 400;
-            player.vx = 0;
-            player.vy = 0;
-            // Reset platforms for retry
-            platforms.forEach(p => {
-                if (p.trigger) {
-                    p.isSolid = true;
-                    p.color = "#333333";
-                }
-            });
-        }
-    }
+door:{x:900,y:40}
+}
 
-    function draw() {
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+];
 
-        // Draw platforms
-        for (let i = 0; i < platforms.length; i++) {
-            let p = platforms[i];
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, p.width, p.height);
-        }
+/* AUTO GENERATE UNTIL 30 */
 
-        // Draw player
-        ctx.fillStyle = player.color;
-        ctx.fillRect(player.x, player.y, player.width, player.height);
-    }
+while(levels.length < 30){
 
-    function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    }
+levels.push({
 
-    // Start the game
-    loop();
+platforms:[
+{x:Math.random()*700,y:120}
+],
+
+fake:[
+{x:Math.random()*700,y:180}
+],
+
+spikes:[
+{x:Math.random()*800,y:40}
+],
+
+door:{x:900,y:40}
+
+});
+
+}
+
+/* KEYBOARD */
+
+document.addEventListener("keydown", e=>{
+keys[e.key]=true;
+});
+
+document.addEventListener("keyup", e=>{
+keys[e.key]=false;
+});
+
+/* LOAD LEVEL */
+
+function loadLevel(){
+
+document
+.querySelectorAll(
+".platform,.fakePlatform,.spike,.door"
+)
+.forEach(el=>el.remove());
+
+let data = levels[level];
+
+levelText.innerText =
+"Level " + (level+1);
+
+/* NORMAL PLATFORM */
+
+data.platforms.forEach(p=>{
+
+let el =
+document.createElement("div");
+
+el.className="platform";
+
+el.style.left=p.x+"px";
+el.style.bottom=p.y+"px";
+
+game.appendChild(el);
+
+});
+
+/* FAKE PLATFORM */
+
+data.fake.forEach(p=>{
+
+let el =
+document.createElement("div");
+
+el.className="fakePlatform";
+
+el.style.left=p.x+"px";
+el.style.bottom=p.y+"px";
+
+game.appendChild(el);
+
+});
+
+/* SPIKES */
+
+data.spikes.forEach(s=>{
+
+let el =
+document.createElement("div");
+
+el.className="spike";
+
+el.style.left=s.x+"px";
+el.style.bottom=s.y+"px";
+
+game.appendChild(el);
+
+});
+
+/* DOOR */
+
+let door =
+document.createElement("div");
+
+door.className="door";
+
+door.style.left=data.door.x+"px";
+door.style.bottom=data.door.y+"px";
+
+game.appendChild(door);
+
+}
+
+loadLevel();
+
+/* RESPAWN */
+
+function respawn(){
+
+x = 50;
+y = 40;
+
+velocityY = 0;
+
+}
+
+/* GAME LOOP */
+
+function gameLoop(){
+
+if(keys["ArrowLeft"]) x-=4;
+if(keys["ArrowRight"]) x+=4;
+
+if(keys[" "] && y<=40){
+
+velocityY=12;
+
+}
+
+/* GRAVITY */
+
+velocityY -= gravity;
+y += velocityY;
+
+if(y <= 40){
+
+y = 40;
+velocityY = 0;
+
+}
+
+player.style.left = x+"px";
+player.style.bottom = y+"px";
+
+/* COLLISION */
+
+let playerRect =
+player.getBoundingClientRect();
+
+/* SPIKES */
+
+document.querySelectorAll(".spike")
+.forEach(spike=>{
+
+let r =
+spike.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+
+respawn();
+
+}
+
+});
+
+/* FAKE PLATFORM DISAPPEAR */
+
+document.querySelectorAll(".fakePlatform")
+.forEach(fp=>{
+
+let r =
+fp.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+
+fp.style.display="none";
+
+}
+
+});
+
+/* DOOR */
+
+let door =
+document.querySelector(".door");
+
+if(door){
+
+let r =
+door.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+
+level++;
+
+if(level >= levels.length){
+
+alert("🏆 All Levels Complete!");
+
+level = 0;
+
+}
+
+respawn();
+loadLevel();
+
+}
+
+}
+
+requestAnimationFrame(gameLoop);
+
+}
+
+gameLoop();
+
 </script>
 
 </body>
