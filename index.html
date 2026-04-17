@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hard Level Devil Game V3</title>
+
+<style>
+
+body {
+    margin: 0;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.game {
+    width: 900px;
+    height: 450px;
+    background: #111;
+    border: 3px solid white;
+    position: relative;
+    overflow: hidden;
+}
+
+.player {
+    width: 40px;
+    height: 40px;
+    background: red;
+    position: absolute;
+    bottom: 40px;
+    left: 50px;
+}
+
+.ground {
+    width: 100%;
+    height: 40px;
+    background: #333;
+    position: absolute;
+    bottom: 0;
+}
+
+.spike {
+    width: 30px;
+    height: 30px;
+    background: white;
+    position: absolute;
+    bottom: 40px;
+}
+
+.enemy {
+    width: 35px;
+    height: 35px;
+    background: purple;
+    position: absolute;
+    bottom: 40px;
+}
+
+.invisible {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    bottom: 40px;
+}
+
+.door {
+    width: 40px;
+    height: 60px;
+    background: lime;
+    position: absolute;
+}
+
+.levelText {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="game" id="game">
+
+<div class="levelText" id="levelText">
+Level 1
+</div>
+
+<div class="player" id="player"></div>
+
+<div class="ground"></div>
+
+</div>
+
+<script>
+
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const levelText = document.getElementById("levelText");
+
+let x = 50;
+let y = 40;
+
+let velocityY = 0;
+let gravity = 0.5;
+
+let keys = {};
+
+let level = 0;
+
+let levels = [
+
+{
+spikes:[200,260],
+invisible:[400],
+enemy:[500],
+door:{x:820,y:40}
+},
+
+{
+spikes:[150,210,270],
+invisible:[350],
+enemy:[600],
+door:{x:820,y:40}
+}
+
+];
+
+/* AUTO MAKE 30 LEVELS */
+
+while(levels.length < 30){
+
+levels.push({
+
+spikes:[
+Math.random()*700,
+Math.random()*700
+],
+
+invisible:[
+Math.random()*700
+],
+
+enemy:[
+Math.random()*700
+],
+
+door:{x:820,y:40}
+
+});
+
+}
+
+document.addEventListener("keydown", e=>{
+keys[e.key]=true;
+});
+
+document.addEventListener("keyup", e=>{
+keys[e.key]=false;
+});
+
+/* LOAD LEVEL */
+
+function loadLevel(){
+
+document
+.querySelectorAll(".spike,.door,.enemy,.invisible")
+.forEach(el=>el.remove());
+
+let data = levels[level];
+
+levelText.innerText =
+"Level " + (level+1);
+
+/* SPIKES */
+
+data.spikes.forEach(pos=>{
+
+let spike =
+document.createElement("div");
+
+spike.className="spike";
+
+spike.style.left=pos+"px";
+
+game.appendChild(spike);
+
+});
+
+/* INVISIBLE TRAPS */
+
+data.invisible.forEach(pos=>{
+
+let inv =
+document.createElement("div");
+
+inv.className="invisible";
+
+inv.style.left=pos+"px";
+
+game.appendChild(inv);
+
+});
+
+/* ENEMY */
+
+data.enemy.forEach(pos=>{
+
+let enemy =
+document.createElement("div");
+
+enemy.className="enemy";
+
+enemy.style.left=pos+"px";
+
+game.appendChild(enemy);
+
+});
+
+/* DOOR */
+
+let door =
+document.createElement("div");
+
+door.className="door";
+
+door.style.left=data.door.x+"px";
+door.style.bottom=data.door.y+"px";
+
+game.appendChild(door);
+
+}
+
+loadLevel();
+
+/* GAME LOOP */
+
+function gameLoop(){
+
+if(keys["ArrowLeft"]) x-=4;
+if(keys["ArrowRight"]) x+=4;
+
+if(keys[" "] && y===40){
+velocityY=10;
+}
+
+velocityY-=gravity;
+y+=velocityY;
+
+if(y<=40){
+y=40;
+velocityY=0;
+}
+
+player.style.left=x+"px";
+player.style.bottom=y+"px";
+
+let playerRect =
+player.getBoundingClientRect();
+
+/* SPIKES */
+
+document.querySelectorAll(".spike")
+.forEach(spike=>{
+
+let r=
+spike.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+alert("💀 You Died!");
+location.reload();
+}
+
+});
+
+/* INVISIBLE */
+
+document.querySelectorAll(".invisible")
+.forEach(inv=>{
+
+let r=
+inv.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+alert("👻 Invisible Trap!");
+location.reload();
+}
+
+});
+
+/* ENEMY MOVE */
+
+document.querySelectorAll(".enemy")
+.forEach(enemy=>{
+
+let left =
+parseInt(enemy.style.left);
+
+enemy.style.left =
+(left + Math.sin(Date.now()/300)*2) + "px";
+
+let r=
+enemy.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+alert("🧟 Enemy Got You!");
+location.reload();
+}
+
+});
+
+/* DOOR */
+
+let door =
+document.querySelector(".door");
+
+if(door){
+
+let r=
+door.getBoundingClientRect();
+
+if(
+playerRect.left < r.right &&
+playerRect.right > r.left &&
+playerRect.bottom > r.top &&
+playerRect.top < r.bottom
+){
+
+level++;
+
+if(level >= levels.length){
+
+alert("🏆 All Levels Complete!");
+
+location.reload();
+
+}else{
+
+x=50;
+y=40;
+
+loadLevel();
+
+}
+
+}
+
+}
+
+requestAnimationFrame(gameLoop);
+
+}
+
+gameLoop();
+
+</script>
+
+</body>
+</html>
